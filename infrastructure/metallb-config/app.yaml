@@ -1,0 +1,4 @@
+name: metallb-config
+namespace: metallb-system
+syncWave: "1"
+type: kustomize

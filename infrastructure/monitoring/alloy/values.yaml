@@ -1,0 +1,82 @@
+# Grafana Alloy en DaemonSet : découvre les pods, tail leurs logs sous /var/log/pods,
+# parse le format CRI (containerd/k3s) et pousse vers Loki.
+alloy:
+  mounts:
+    # Monte /var/log (donne accès à /var/log/pods/*/*/*.log).
+    varlog: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  configMap:
+    content: |-
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      // Découverte de tous les pods du cluster.
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // Relabel : labels métier + construction du chemin de log sur disque.
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_node_name"]
+          target_label  = "node"
+        }
+        // __path__ = /var/log/pods/<namespace>_<pod>_<uid>/<container>/*.log
+        rule {
+          source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+          separator     = "/"
+          action        = "replace"
+          replacement   = "/var/log/pods/*$1/*.log"
+          target_label  = "__path__"
+        }
+      }
+
+      local.file_match "pod_logs" {
+        path_targets = discovery.relabel.pod_logs.output
+      }
+
+      loki.source.file "pod_logs" {
+        targets    = local.file_match.pod_logs.targets
+        forward_to = [loki.process.pod_logs.receiver]
+      }
+
+      // Parse le format CRI puis transmet à Loki.
+      loki.process "pod_logs" {
+        stage.cri {}
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+# DaemonSet (défaut du chart) pour tailler les logs sur chaque nœud.
+controller:
+  type: daemonset

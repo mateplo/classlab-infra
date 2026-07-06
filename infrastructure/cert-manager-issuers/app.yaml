@@ -1,0 +1,4 @@
+name: cert-manager-issuers
+namespace: cert-manager
+syncWave: "1"
+type: kustomize

@@ -1,0 +1,12 @@
+# Controller Sealed Secrets. Nom fixé à `sealed-secrets-controller` pour rester
+# aligné avec la valeur par défaut attendue par le CLI kubeseal.
+# Comme il tourne dans le namespace `sealed-secrets` (et non kube-system), sceller avec :
+#   kubeseal --controller-namespace sealed-secrets --controller-name sealed-secrets-controller
+fullnameOverride: sealed-secrets-controller
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi

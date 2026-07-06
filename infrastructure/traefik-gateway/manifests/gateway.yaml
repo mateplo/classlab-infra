@@ -1,0 +1,52 @@
+# Gateway partagé pour tout le cluster. Les HTTPRoute de n'importe quel namespace
+# peuvent s'y attacher (allowedRoutes: All). TLS terminé avec un certificat wildcard
+# signé par la CA interne (ClusterIssuer internal-ca).
+#
+# Domaine lab : classlab.lan → mapper sur l'IP MetalLB de Traefik (192.168.56.240)
+# dans /etc/hosts des postes clients.
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-classlab
+  namespace: kube-system
+spec:
+  secretName: wildcard-classlab-tls
+  duration: 2160h    # 90 jours
+  renewBefore: 360h  # 15 jours
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    - classlab.lan
+    - "*.classlab.lan"
+  issuerRef:
+    name: internal-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: classlab
+  namespace: kube-system
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: wildcard-classlab-tls
+      allowedRoutes:
+        namespaces:
+          from: All

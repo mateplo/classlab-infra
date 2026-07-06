@@ -1,0 +1,7 @@
+name: kube-prometheus-stack
+namespace: monitoring
+syncWave: "2"
+type: helm
+repoURL: https://prometheus-community.github.io/helm-charts
+chart: kube-prometheus-stack
+targetRevision: 87.10.1

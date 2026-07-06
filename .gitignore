@@ -1,0 +1,12 @@
+# Sauvegardes de clés / secrets — ne JAMAIS committer
+*.backup.yaml
+sealed-secrets-key*.yaml
+*.key
+*.pem
+kubeconfig
+*.kubeconfig
+
+# Divers
+.DS_Store
+*.swp
+*.tmp

@@ -1,0 +1,7 @@
+name: cnpg
+namespace: cnpg-system
+syncWave: "1"
+type: helm
+repoURL: https://cloudnative-pg.github.io/charts
+chart: cloudnative-pg
+targetRevision: 0.29.0

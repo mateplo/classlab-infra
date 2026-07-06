@@ -1,0 +1,7 @@
+name: loki
+namespace: monitoring
+syncWave: "2"
+type: helm
+repoURL: https://grafana.github.io/helm-charts
+chart: loki
+targetRevision: 7.0.0

@@ -1,0 +1,17 @@
+# Traefik est déployé par k3s via l'addon HelmChart. On ne le réinstalle pas :
+# on le CONFIGURE via HelmChartConfig pour activer le provider Gateway API.
+# On désactive la GatewayClass / le Gateway auto-créés par le chart : on les gère nous-mêmes.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    providers:
+      kubernetesGateway:
+        enabled: true
+    gateway:
+      enabled: false
+    gatewayClass:
+      enabled: false

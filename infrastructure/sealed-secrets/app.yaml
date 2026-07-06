@@ -1,0 +1,7 @@
+name: sealed-secrets
+namespace: sealed-secrets
+syncWave: "0"
+type: helm
+repoURL: https://bitnami-labs.github.io/sealed-secrets
+chart: sealed-secrets
+targetRevision: 2.18.6

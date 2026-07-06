@@ -1,0 +1,59 @@
+# Loki en mode monolithique (SingleBinary), stockage filesystem sur local-path.
+# Profil lab : replication_factor 1, pas de cache mémoire, pas de gateway/canary.
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  limits_config:
+    retention_period: 168h   # 7 jours
+    reject_old_samples: false
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# Désactivation de tous les composants du mode scalable/distribué.
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+# Caches memcached désactivés (sinon réservation mémoire importante par défaut).
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
+# Composants annexes inutiles en lab.
+gateway:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+minio:
+  enabled: false

@@ -1,0 +1,76 @@
+# kube-prometheus-stack, profil lab k3s.
+
+# --- Composants du control-plane non exposés/scrapables sur k3s : désactivés ---
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+# --- Prometheus ---
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    # Découvre les ServiceMonitor/PodMonitor de tous les namespaces, pas seulement ceux du release.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+# --- Alertmanager ---
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# --- Grafana ---
+grafana:
+  # Mot de passe admin par défaut du chart (admin / prom-operator) pour un bootstrap sans friction.
+  # Durcissement : créer un SealedSecret `grafana-admin` (clés admin-user/admin-password)
+  # puis remplacer par `admin.existingSecret: grafana-admin`.
+  defaultDashboardsTimezone: browser
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  # Datasource Loki ajoutée automatiquement (Prometheus l'est déjà par le chart).
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100

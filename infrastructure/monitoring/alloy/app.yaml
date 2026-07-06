@@ -1,0 +1,7 @@
+name: alloy
+namespace: monitoring
+syncWave: "2"
+type: helm
+repoURL: https://grafana.github.io/helm-charts
+chart: alloy
+targetRevision: 1.10.0

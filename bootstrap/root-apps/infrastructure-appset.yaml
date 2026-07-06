@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: infrastructure
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+
+  # Découverte automatique : chaque composant d'infra est un dossier contenant
+  # un fichier `app.yaml` (fichier de PARAMÈTRES, pas un manifeste Application).
+  # Ajouter un composant = ajouter un dossier avec son app.yaml. Rien d'autre à toucher.
+  generators:
+    - git:
+        repoURL: https://github.com/mateplo/classlab-infra.git
+        revision: main
+        files:
+          - path: infrastructure/**/app.yaml
+
+  template:
+    metadata:
+      name: "{{ .name }}"
+      namespace: argocd
+      labels:
+        app.kubernetes.io/managed-by: applicationset
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .namespace }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        # L'ordre inter-Applications est best-effort : ArgoCD retente les syncs
+        # qui échouent transitoirement (ex. CR appliqué avant que ses CRD existent).
+        retry:
+          limit: 10
+          backoff:
+            duration: 15s
+            factor: 2
+            maxDuration: 5m
+
+  # templatePatch : gère la différence structurelle helm (multi-source) vs kustomize (source unique).
+  templatePatch: |
+    metadata:
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{ .syncWave }}"
+    spec:
+      {{- if eq .type "helm" }}
+      sources:
+        - repoURL: {{ .repoURL }}
+          chart: {{ .chart }}
+          targetRevision: {{ .targetRevision }}
+          helm:
+            releaseName: {{ .name }}
+            valueFiles:
+              - $values/{{ .path.path }}/values.yaml
+        # 2e source = ce repo, référencée via $values pour fournir le values.yaml versionné.
+        - repoURL: https://github.com/mateplo/classlab-infra.git
+          targetRevision: main
+          ref: values
+      {{- else }}
+      source:
+        repoURL: https://github.com/mateplo/classlab-infra.git
+        targetRevision: main
+        path: {{ .path.path }}/manifests
+      {{- end }}

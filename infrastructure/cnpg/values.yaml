@@ -1,0 +1,17 @@
+# Opérateur CloudNativePG uniquement (couche plateforme).
+# Les objets `Cluster` PostgreSQL applicatifs sont déclarés dans les repos des apps,
+# pas ici. Rappel : le stockage par défaut `local-path` est node-local.
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    memory: 200Mi
+
+monitoring:
+  # PodMonitor pour Prometheus. Créé seulement si la CRD monitoring.coreos.com existe
+  # (fournie par kube-prometheus-stack). Laisser à false tant que la stack monitoring
+  # n'est pas montée, puis basculer à true.
+  podMonitorEnabled: false

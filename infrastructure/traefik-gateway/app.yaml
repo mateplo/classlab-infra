@@ -1,0 +1,4 @@
+name: traefik-gateway
+namespace: kube-system
+syncWave: "1"
+type: kustomize

@@ -1,0 +1,40 @@
+# Chaîne de confiance interne, entièrement générée dans le cluster.
+# Aucune clé privée n'est committée dans Git.
+#
+#   selfsigned-bootstrap (ClusterIssuer selfSigned)
+#        └── Certificate "internal-ca" (isCA) → secret internal-ca-key-pair (ns cert-manager)
+#                 └── ClusterIssuer "internal-ca" (type ca) → signe tous les certs internes
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: internal-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: classlab-internal-ca
+  secretName: internal-ca-key-pair
+  duration: 87600h    # 10 ans
+  renewBefore: 720h   # 30 jours
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: internal-ca
+spec:
+  ca:
+    secretName: internal-ca-key-pair

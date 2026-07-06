@@ -1,0 +1,7 @@
+name: cert-manager
+namespace: cert-manager
+syncWave: "0"
+type: helm
+repoURL: https://charts.jetstack.io
+chart: cert-manager
+targetRevision: v1.20.3

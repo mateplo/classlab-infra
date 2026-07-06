@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    # ArgoCD se gère lui-même : cette Application reconcilie bootstrap/argocd.
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mateplo/classlab-infra.git
+    targetRevision: main
+    path: bootstrap/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      # prune volontairement désactivé sur ArgoCD lui-même (sécurité anti auto-suppression).
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true          # requis : les CRD ArgoCD dépassent la limite d'annotation client-side apply
+      - RespectIgnoreDifferences=true
