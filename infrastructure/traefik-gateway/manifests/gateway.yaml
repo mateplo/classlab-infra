@@ -32,16 +32,20 @@ metadata:
   namespace: kube-system
 spec:
   gatewayClassName: traefik
+  # IMPORTANT : le port d'un listener Gateway doit matcher le port d'un entryPoint Traefik.
+  # Les entryPoints de k3s-Traefik sont web=:8000 et websecure=:8443 (exposés en 80/443
+  # par le Service). On met donc 8000/8443 ici, PAS 80/443, sinon -> PortUnavailable.
+  # Le trafic externe reste en 80/443 (IP MetalLB 192.168.56.240).
   listeners:
     - name: http
       protocol: HTTP
-      port: 80
+      port: 8000
       allowedRoutes:
         namespaces:
           from: All
     - name: https
       protocol: HTTPS
-      port: 443
+      port: 8443
       tls:
         mode: Terminate
         certificateRefs:
