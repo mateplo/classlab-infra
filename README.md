@@ -52,8 +52,10 @@ Prérequis : `kubectl` pointant sur le cluster, accès réseau à github.com.
 
 ```bash
 # 1. Installer ArgoCD (base kustomize upstream pinnée)
+#    --server-side est REQUIS : la CRD ApplicationSet dépasse la limite d'annotation
+#    du client-side apply et échouerait silencieusement.
 kubectl create namespace argocd
-kubectl apply -n argocd -k bootstrap/argocd
+kubectl apply -n argocd -k bootstrap/argocd --server-side --force-conflicts
 
 # 2. Attendre qu'ArgoCD soit prêt
 kubectl -n argocd rollout status deploy/argocd-server

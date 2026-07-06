@@ -48,8 +48,10 @@ git push origin main
 
 ```bash
 # 1. Installer ArgoCD (base kustomize upstream pinnée v3.4.4)
+#    --server-side OBLIGATOIRE : la CRD ApplicationSet est trop grosse pour le
+#    client-side apply (limite d'annotation 256 Ko) et échouerait sans erreur visible.
 kubectl create namespace argocd
-kubectl apply -n argocd -k bootstrap/argocd
+kubectl apply -n argocd -k bootstrap/argocd --server-side --force-conflicts
 
 # 2. Attendre qu'il soit prêt
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
@@ -321,4 +323,10 @@ targetRevision: <pin>
 - **`prune: true`** ne supprime que ce que l'Application a déjà géré → sûr pour l'adoption, mais **attention en supprimant un composant** (les PVC/données peuvent partir selon le chart).
 - **Traefik reste géré par k3s** : on le configure via `HelmChartConfig`, on ne le « reprend » pas (cf. README / discussion adoption).
 - **Stockage `local-path` node-local** : un pod avec PVC est épinglé à son nœud. OK en lab, à revoir pour de la HA.
+- **Réseau inter-nœuds (k3s + VirtualBox)** : flannel doit utiliser l'interface **host-only** (`192.168.56.x`), pas la NAT (`10.0.2.15`, identique sur toutes les VMs). Vérifier :
+  ```bash
+  kubectl get nodes -o custom-columns=NODE:.metadata.name,\
+  FLANNEL_IP:'.metadata.annotations.flannel\.alpha\.coreos\.com/public-ip'
+  ```
+  Si deux nœuds affichent la même IP (`10.0.2.15`), le trafic pod-à-pod inter-nœuds est cassé. Fix : sur chaque nœud, forcer `node-ip` + `flannel-iface` dans `/etc/rancher/k3s/config.yaml` puis redémarrer k3s (voir procédure ci-dessous / historique de setup).
 - **Charts Loki/Alloy** : si un sync échoue sur un champ de values inconnu, vérifier le schéma de la version pinnée (`helm show values <repo>/<chart> --version <v>`).
