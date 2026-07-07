@@ -1,0 +1,7 @@
+# Composant compagnon : expose l'UI ArgoCD via le Gateway `classlab`.
+# Requiert argocd-server en mode insecure (cf. patch bootstrap/argocd) :
+# le Gateway termine le TLS, argocd-server sert du HTTP simple -> pas de boucle de redirection.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - httproute.yaml

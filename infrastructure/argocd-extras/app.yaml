@@ -1,0 +1,4 @@
+name: argocd-extras
+namespace: argocd
+syncWave: "3"
+type: kustomize

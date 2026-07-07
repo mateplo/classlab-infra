@@ -6,3 +6,15 @@ kind: Kustomization
 # de sorte qu'ArgoCD se maintient lui-même via GitOps après le bootstrap initial.
 resources:
   - github.com/argoproj/argo-cd/manifests/cluster-install?ref=v3.4.4
+
+# argocd-server derrière le Gateway `classlab` qui TERMINE le TLS : on passe
+# argocd-server en HTTP simple (insecure) pour éviter la boucle de redirection
+# HTTP->HTTPS. Le TLS externe reste assuré par le Gateway (cert wildcard interne).
+patches:
+  - patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+      data:
+        server.insecure: "true"

@@ -1,0 +1,4 @@
+name: monitoring-extras
+namespace: monitoring
+syncWave: "3"
+type: kustomize
