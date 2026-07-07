@@ -1,0 +1,34 @@
+# Argo CD Image Updater — surveille GHCR et écrit les nouveaux tags dans le repo
+# classlab-k8s (write-back git). Les annotations par-application (quelles images,
+# stratégie, write-back) sont portées par l'ApplicationSet apps, pas ici.
+#
+# DEUX SECRETS À CRÉER À LA MAIN dans le namespace `argocd` (non versionnés — à recréer
+# en cas de rebuild du cluster) :
+#   1) ghcr-creds  — lecture des tags GHCR (PAT GitHub `read:packages`) :
+#        kubectl create secret docker-registry ghcr-creds -n argocd \
+#          --docker-server=ghcr.io --docker-username=<user> --docker-password=<PAT>
+#   2) git-creds   — write-back vers classlab-k8s. repoURL des Applications = HTTPS,
+#      donc secret username/password (PAT avec droit `repo`/contents:write), PAS de clé SSH :
+#        kubectl create secret generic git-creds -n argocd \
+#          --from-literal=username=mateplo --from-literal=password=<PAT>
+
+config:
+  logLevel: info
+  # Enregistre GHCR (token anonyme insuffisant : credentials requis même en public).
+  registries:
+    - name: GitHub Container Registry
+      prefix: ghcr.io
+      api_url: https://ghcr.io
+      ping: yes
+      credentials: pullsecret:argocd/ghcr-creds
+  # Identité des commits de write-back.
+  gitCommitUser: argocd-image-updater
+  gitCommitMail: image-updater@classlab.lan
+
+# Borné (leçon de la session : tout composant doit avoir une limite mémoire).
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    memory: 128Mi

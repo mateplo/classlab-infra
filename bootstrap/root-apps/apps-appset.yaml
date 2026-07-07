@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: udagram
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+
+  # Un environnement = un élément. Chaque env pointe vers son overlay kustomize dans
+  # le repo APP (dual-repo). La stratégie Image Updater diffère : dev/staging suivent
+  # la dernière image buildée, prod suit du sémver.
+  generators:
+    - list:
+        elements:
+          - env: dev
+            strategy: newest-build
+          - env: staging
+            strategy: newest-build
+          - env: prod
+            strategy: semver
+
+  template:
+    metadata:
+      name: "udagram-{{ .env }}"
+      namespace: argocd
+      labels:
+        app.kubernetes.io/managed-by: applicationset
+      annotations:
+        # --- Argo CD Image Updater ---
+        argocd-image-updater.argoproj.io/image-list: >-
+          frontend=ghcr.io/mateplo/udagram-frontend,
+          user=ghcr.io/mateplo/udagram-restapi-user,
+          feed=ghcr.io/mateplo/udagram-restapi-feed,
+          filter=ghcr.io/mateplo/udagram-restapi-image-filter
+        argocd-image-updater.argoproj.io/frontend.update-strategy: "{{ .strategy }}"
+        argocd-image-updater.argoproj.io/user.update-strategy: "{{ .strategy }}"
+        argocd-image-updater.argoproj.io/feed.update-strategy: "{{ .strategy }}"
+        argocd-image-updater.argoproj.io/filter.update-strategy: "{{ .strategy }}"
+        # Écrit les nouveaux tags dans le bloc images: du kustomization de l'overlay.
+        argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
+        argocd-image-updater.argoproj.io/write-back-target: kustomization
+        argocd-image-updater.argoproj.io/git-branch: main
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/mateplo/classlab-k8s.git
+        targetRevision: main
+        path: "overlays/{{ .env }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "classlab-code-{{ .env }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 15s
+            factor: 2
+            maxDuration: 5m
