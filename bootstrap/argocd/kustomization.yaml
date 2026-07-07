@@ -20,3 +20,112 @@ patches:
         name: argocd-cmd-params-cm
       data:
         server.insecure: "true"
+
+  # Limites mémoire sur les composants ArgoCD (l'install upstream n'en pose aucune).
+  # Objectif lab : conso plafonnée et prévisible pour rester compatible d'un downgrade
+  # à 4 Go/nœud. Pas de limite CPU (2 cœurs -> éviter le throttling).
+  - patch: |
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: argocd-application-controller
+      spec:
+        template:
+          spec:
+            containers:
+              - name: argocd-application-controller
+                resources:
+                  requests:
+                    memory: 128Mi
+                  limits:
+                    memory: 512Mi
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-repo-server
+      spec:
+        template:
+          spec:
+            containers:
+              - name: argocd-repo-server
+                resources:
+                  requests:
+                    memory: 96Mi
+                  limits:
+                    memory: 384Mi
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-server
+      spec:
+        template:
+          spec:
+            containers:
+              - name: argocd-server
+                resources:
+                  requests:
+                    memory: 64Mi
+                  limits:
+                    memory: 256Mi
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-applicationset-controller
+      spec:
+        template:
+          spec:
+            containers:
+              - name: argocd-applicationset-controller
+                resources:
+                  requests:
+                    memory: 64Mi
+                  limits:
+                    memory: 192Mi
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-notifications-controller
+      spec:
+        template:
+          spec:
+            containers:
+              - name: argocd-notifications-controller
+                resources:
+                  requests:
+                    memory: 64Mi
+                  limits:
+                    memory: 128Mi
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-redis
+      spec:
+        template:
+          spec:
+            containers:
+              - name: redis
+                resources:
+                  requests:
+                    memory: 32Mi
+                  limits:
+                    memory: 128Mi
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-dex-server
+      spec:
+        template:
+          spec:
+            containers:
+              - name: dex
+                resources:
+                  requests:
+                    memory: 32Mi
+                  limits:
+                    memory: 128Mi

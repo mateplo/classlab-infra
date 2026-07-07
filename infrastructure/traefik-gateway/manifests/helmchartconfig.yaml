@@ -24,3 +24,10 @@ spec:
           enabled: true
         serviceMonitor:
           enabled: true
+    # Traefik n'a aucune limite par défaut dans k3s -> plafond mémoire (petit et stable).
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 150Mi

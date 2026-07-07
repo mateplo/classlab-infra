@@ -20,6 +20,31 @@ prometheus-node-exporter:
   extraArgs:
     - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/pods/.+)($|/)
     - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|vboxsf)$
+  # DaemonSet (1 pod/nœud) : borné bas, node-exporter consomme peu.
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+# --- kube-state-metrics (sous-chart) ---
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+# --- prometheus-operator ---
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 192Mi
 
 # --- Prometheus ---
 prometheus:
@@ -80,6 +105,13 @@ grafana:
   sidecar:
     dashboards:
       searchNamespace: ALL
+    # Les sidecars (dashboards + datasources) sont sinon non bornés -> plafond bas.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 96Mi
   persistence:
     enabled: true
     storageClassName: local-path
