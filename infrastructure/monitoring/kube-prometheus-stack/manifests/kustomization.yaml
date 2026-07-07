@@ -1,0 +1,8 @@
+# Objets bruts co-localisés avec le chart kube-prometheus-stack (3e source ArgoCD,
+# cf. extraManifests dans app.yaml). Exposent les UIs via le Gateway `classlab`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - grafana.yaml
+  - prometheus.yaml
+  - alertmanager.yaml

@@ -65,6 +65,13 @@ spec:
         - repoURL: https://github.com/mateplo/classlab-infra.git
           targetRevision: main
           ref: values
+        {{- if hasKey . "extraManifests" }}{{- if .extraManifests }}
+        # 3e source optionnelle : objets bruts (HTTPRoute…) co-localisés avec le chart,
+        # dans {path}/manifests. Activée par `extraManifests: true` dans app.yaml.
+        - repoURL: https://github.com/mateplo/classlab-infra.git
+          targetRevision: main
+          path: {{ .path.path }}/manifests
+        {{- end }}{{- end }}
       {{- else }}
       source:
         repoURL: https://github.com/mateplo/classlab-infra.git
