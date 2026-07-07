@@ -1,0 +1,4 @@
+name: http-routes
+namespace: kube-system
+syncWave: "3"
+type: kustomize

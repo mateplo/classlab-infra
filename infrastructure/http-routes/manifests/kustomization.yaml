@@ -1,0 +1,10 @@
+# Routage HTTP unifié : toutes les HTTPRoute qui exposent les UIs du cluster
+# via le Gateway `classlab`. Chaque route vit dans le namespace de son backend
+# (pas de ReferenceGrant). Ajouter une expo = ajouter un fichier ici.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - grafana.yaml
+  - prometheus.yaml
+  - alertmanager.yaml
+  - argocd.yaml
