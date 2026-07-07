@@ -10,6 +10,17 @@ kubeProxy:
 kubeEtcd:
   enabled: false
 
+# --- node-exporter ---
+# Le partage VirtualBox `/vagrant` (fstype vboxsf) apparaît en double dans les montages :
+# node-exporter collecte deux fois les mêmes séries filesystem -> le registre rejette TOUT
+# le scrape ("collected before with the same name and label values") et la cible tombe.
+# On exclut vboxsf du collecteur filesystem (dossier partagé de l'hôte, pas du stockage nœud).
+# NB : extraArgs remplace la liste du chart -> on reprend les exclusions par défaut + vboxsf.
+prometheus-node-exporter:
+  extraArgs:
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/pods/.+)($|/)
+    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|vboxsf)$
+
 # --- Prometheus ---
 prometheus:
   prometheusSpec:
