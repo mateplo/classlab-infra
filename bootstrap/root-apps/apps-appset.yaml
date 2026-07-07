@@ -7,18 +7,19 @@ spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
 
-  # Un environnement = un élément. Chaque env pointe vers son overlay kustomize dans
-  # le repo APP (dual-repo). La stratégie Image Updater diffère : dev/staging suivent
-  # la dernière image buildée, prod suit du sémver.
+  # Un environnement = un élément, lié à UNE branche du repo de code :
+  #   dev <- branche dev, staging <- branche staging, prod <- branche master/main.
+  # allowTags = le préfixe de tag que cet env accepte (produit par la CID de sa branche).
+  # Chaque env pointe vers son overlay kustomize dans le repo APP (dual-repo).
   generators:
     - list:
         elements:
           - env: dev
-            strategy: newest-build
+            allowTags: "regexp:^dev-"
           - env: staging
-            strategy: newest-build
+            allowTags: "regexp:^staging-"
           - env: prod
-            strategy: semver
+            allowTags: "regexp:^(master|main)-"
 
   template:
     metadata:
@@ -33,11 +34,17 @@ spec:
           user=ghcr.io/mateplo/udagram-restapi-user,
           feed=ghcr.io/mateplo/udagram-restapi-feed,
           filter=ghcr.io/mateplo/udagram-restapi-image-filter
-        argocd-image-updater.argoproj.io/frontend.update-strategy: "{{ .strategy }}"
-        argocd-image-updater.argoproj.io/user.update-strategy: "{{ .strategy }}"
-        argocd-image-updater.argoproj.io/feed.update-strategy: "{{ .strategy }}"
-        argocd-image-updater.argoproj.io/filter.update-strategy: "{{ .strategy }}"
-        # Écrit les nouveaux tags dans le bloc images: du kustomization de l'overlay.
+        # Stratégie : garder la dernière image BUILDÉE parmi les tags autorisés.
+        argocd-image-updater.argoproj.io/frontend.update-strategy: newest-build
+        argocd-image-updater.argoproj.io/user.update-strategy: newest-build
+        argocd-image-updater.argoproj.io/feed.update-strategy: newest-build
+        argocd-image-updater.argoproj.io/filter.update-strategy: newest-build
+        # Filtre par branche : cet env n'épingle QUE les tags de sa branche.
+        argocd-image-updater.argoproj.io/frontend.allow-tags: "{{ .allowTags }}"
+        argocd-image-updater.argoproj.io/user.allow-tags: "{{ .allowTags }}"
+        argocd-image-updater.argoproj.io/feed.allow-tags: "{{ .allowTags }}"
+        argocd-image-updater.argoproj.io/filter.allow-tags: "{{ .allowTags }}"
+        # Write-back : commit du nouveau tag dans le bloc images: du kustomization.
         argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
         argocd-image-updater.argoproj.io/write-back-target: kustomization
         argocd-image-updater.argoproj.io/git-branch: main
