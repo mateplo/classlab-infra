@@ -58,6 +58,13 @@ grafana:
   # Durcissement : créer un SealedSecret `grafana-admin` (clés admin-user/admin-password)
   # puis remplacer par `admin.existingSecret: grafana-admin`.
   defaultDashboardsTimezone: browser
+  # Le sidecar dashboards scanne TOUS les namespaces : chaque composant d'infra livre
+  # son propre dashboard sous forme de ConfigMap (label `grafana_dashboard: "1"`) dans
+  # son namespace, sans avoir à les centraliser dans `monitoring`. Le chart ajoute
+  # automatiquement le ClusterRole de lecture des ConfigMap cluster-wide au sidecar.
+  sidecar:
+    dashboards:
+      searchNamespace: ALL
   persistence:
     enabled: true
     storageClassName: local-path

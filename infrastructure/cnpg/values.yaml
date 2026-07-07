@@ -12,6 +12,11 @@ resources:
 
 monitoring:
   # PodMonitor pour Prometheus. Créé seulement si la CRD monitoring.coreos.com existe
-  # (fournie par kube-prometheus-stack). Laisser à false tant que la stack monitoring
-  # n'est pas montée, puis basculer à true.
-  podMonitorEnabled: false
+  # (fournie par kube-prometheus-stack). Prometheus le découvre car
+  # podMonitorSelectorNilUsesHelmValues=false dans kube-prometheus-stack.
+  podMonitorEnabled: true
+  # Dashboard CNPG livré par le chart sous forme de ConfigMap `cnpg-grafana-dashboard`
+  # (namespace cnpg-system, label sidecar `grafana_dashboard: "1"`). Ramassé par le
+  # sidecar Grafana grâce à `sidecar.dashboards.searchNamespace: ALL` (cf. kube-prometheus-stack).
+  grafanaDashboard:
+    create: true
