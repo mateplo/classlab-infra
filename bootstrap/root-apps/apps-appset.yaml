@@ -59,6 +59,13 @@ spec:
       destination:
         server: https://kubernetes.default.svc
         namespace: "classlab-code-{{ .env }}"
+      # L'HPA (prod) pilote spec.replicas des Deployments -> ArgoCD doit l'ignorer,
+      # sinon selfHeal le ramène à la valeur du manifeste et se bat avec l'autoscaler.
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas
       syncPolicy:
         automated:
           prune: true
