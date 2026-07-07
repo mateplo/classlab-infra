@@ -36,9 +36,11 @@ patches:
               - name: argocd-application-controller
                 resources:
                   requests:
-                    memory: 128Mi
+                    memory: 256Mi
+                  # Pic au warm-up (charge tous les manifestes + grosses CRD kube-prometheus-stack).
+                  # Idle ~250-350Mi ; 1Gi de marge pour éviter l'OOM au (re)démarrage.
                   limits:
-                    memory: 512Mi
+                    memory: 1Gi
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
