@@ -6,3 +6,4 @@ resources:
   - grafana.yaml
   - prometheus.yaml
   - alertmanager.yaml
+  - grafana-admin-sealedsecret.yaml

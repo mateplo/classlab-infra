@@ -54,9 +54,13 @@ alertmanager:
 
 # --- Grafana ---
 grafana:
-  # Mot de passe admin par défaut du chart (admin / prom-operator) pour un bootstrap sans friction.
-  # Durcissement : créer un SealedSecret `grafana-admin` (clés admin-user/admin-password)
-  # puis remplacer par `admin.existingSecret: grafana-admin`.
+  # Mot de passe admin lu depuis le Secret `grafana-admin` (déchiffré par sealed-secrets,
+  # cf. manifests/grafana-admin-sealedsecret.yaml). Le chart ne génère donc plus de mot de
+  # passe aléatoire à chaque sync ArgoCD -> plus de dérive entre le Secret et la base Grafana.
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
   defaultDashboardsTimezone: browser
   # Le sidecar dashboards scanne TOUS les namespaces : chaque composant d'infra livre
   # son propre dashboard sous forme de ConfigMap (label `grafana_dashboard: "1"`) dans
