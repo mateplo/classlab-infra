@@ -7,6 +7,7 @@ kind: Kustomization
 resources:
   - github.com/argoproj/argo-cd/manifests/cluster-install?ref=v3.4.4
   - argocd-httproute.yaml           # expose l'UI ArgoCD via le Gateway `classlab`
+  - argocd-servicemonitors.yaml     # ServiceMonitors des composants ArgoCD (Prometheus)
 
 # argocd-server derrière le Gateway `classlab` qui TERMINE le TLS : on passe
 # argocd-server en HTTP simple (insecure) pour éviter la boucle de redirection

@@ -27,3 +27,12 @@ cainjector:
       memory: 64Mi
     limits:
       memory: 128Mi
+
+# --- Monitoring ---
+# ServiceMonitor pour Prometheus (métriques du controller + webhook cert-manager).
+# prometheus.enabled=true par défaut ; on active le ServiceMonitor. NB : servicemonitor
+# et podmonitor sont mutuellement exclusifs côté chart (n'en activer qu'un).
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: true

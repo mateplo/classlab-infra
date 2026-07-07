@@ -1,0 +1,14 @@
+# MetalLB est installé hors de ce repo (pas de chart à toggler) : on déclare nous-mêmes
+# un PodMonitor. Sélectionne les pods controller ET speaker (label app=metallb), scrape
+# le port metrics nommé `monitoring` (7472). CRD PodMonitor fournie par kube-prometheus-stack.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: metallb
+  namespace: metallb-system
+spec:
+  selector:
+    matchLabels:
+      app: metallb
+  podMetricsEndpoints:
+    - port: monitoring

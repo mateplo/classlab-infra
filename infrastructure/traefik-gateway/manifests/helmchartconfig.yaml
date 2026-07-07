@@ -15,3 +15,12 @@ spec:
       enabled: false
     gatewayClass:
       enabled: false
+    # Métriques Prometheus : service dédié + ServiceMonitor (découvert par Prometheus).
+    # Le point d'entrée `metrics` est activé par défaut par le chart ; on expose le
+    # service et on crée le ServiceMonitor (CRD fournie par kube-prometheus-stack).
+    metrics:
+      prometheus:
+        service:
+          enabled: true
+        serviceMonitor:
+          enabled: true

@@ -80,3 +80,7 @@ alloy:
 # DaemonSet (défaut du chart) pour tailler les logs sur chaque nœud.
 controller:
   type: daemonset
+
+# ServiceMonitor pour scraper les métriques internes d'Alloy (santé du pipeline de logs).
+serviceMonitor:
+  enabled: true

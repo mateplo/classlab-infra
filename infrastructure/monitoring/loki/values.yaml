@@ -57,3 +57,12 @@ test:
   enabled: false
 minio:
   enabled: false
+
+# --- Monitoring ---
+# ServiceMonitor Loki (auto-scrape) + dashboards Grafana livrés en ConfigMap
+# (ramassés par le sidecar Grafana grâce à searchNamespace=ALL).
+monitoring:
+  serviceMonitor:
+    enabled: true
+  dashboards:
+    enabled: true

@@ -10,3 +10,11 @@ resources:
     memory: 64Mi
   limits:
     memory: 128Mi
+
+# --- Monitoring ---
+# ServiceMonitor Prometheus + dashboard Grafana (ConfigMap ramassé par le sidecar, searchNamespace=ALL).
+metrics:
+  serviceMonitor:
+    enabled: true
+  dashboards:
+    create: true
