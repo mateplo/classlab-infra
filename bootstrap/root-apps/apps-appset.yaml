@@ -7,19 +7,15 @@ spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
 
-  # Un environnement = un élément, lié à UNE branche du repo de code :
-  #   dev <- branche dev, staging <- branche staging, prod <- branche master/main.
-  # allowTags = le préfixe de tag que cet env accepte (produit par la CID de sa branche).
-  # Chaque env pointe vers son overlay kustomize dans le repo APP (dual-repo).
+  # Un environnement = un élément, pointant vers son overlay kustomize (dual-repo).
+  # La logique d'update d'image (par branche) est portée par le manifeste ImageUpdater
+  # (CRD), pas ici — l'appset ne fait que créer les 3 Applications.
   generators:
     - list:
         elements:
           - env: dev
-            allowTags: "regexp:^dev-"
           - env: staging
-            allowTags: "regexp:^staging-"
           - env: prod
-            allowTags: "regexp:^(master|main)-"
 
   template:
     metadata:
@@ -27,27 +23,6 @@ spec:
       namespace: argocd
       labels:
         app.kubernetes.io/managed-by: applicationset
-      annotations:
-        # --- Argo CD Image Updater ---
-        argocd-image-updater.argoproj.io/image-list: >-
-          frontend=ghcr.io/mateplo/udagram-frontend,
-          user=ghcr.io/mateplo/udagram-restapi-user,
-          feed=ghcr.io/mateplo/udagram-restapi-feed,
-          filter=ghcr.io/mateplo/udagram-restapi-image-filter
-        # Stratégie : garder la dernière image BUILDÉE parmi les tags autorisés.
-        argocd-image-updater.argoproj.io/frontend.update-strategy: newest-build
-        argocd-image-updater.argoproj.io/user.update-strategy: newest-build
-        argocd-image-updater.argoproj.io/feed.update-strategy: newest-build
-        argocd-image-updater.argoproj.io/filter.update-strategy: newest-build
-        # Filtre par branche : cet env n'épingle QUE les tags de sa branche.
-        argocd-image-updater.argoproj.io/frontend.allow-tags: "{{ .allowTags }}"
-        argocd-image-updater.argoproj.io/user.allow-tags: "{{ .allowTags }}"
-        argocd-image-updater.argoproj.io/feed.allow-tags: "{{ .allowTags }}"
-        argocd-image-updater.argoproj.io/filter.allow-tags: "{{ .allowTags }}"
-        # Write-back : commit du nouveau tag dans le bloc images: du kustomization.
-        argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
-        argocd-image-updater.argoproj.io/write-back-target: kustomization
-        argocd-image-updater.argoproj.io/git-branch: main
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:

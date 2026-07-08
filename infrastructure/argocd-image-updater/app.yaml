@@ -2,6 +2,8 @@ name: argocd-image-updater
 namespace: argocd
 syncWave: "1"
 type: helm
+# 3e source : le manifeste ImageUpdater (CRD) co-localisé dans ./manifests.
+extraManifests: true
 repoURL: https://argoproj.github.io/argo-helm
 chart: argocd-image-updater
 targetRevision: 1.2.4

@@ -1,0 +1,82 @@
+# Nouveau modèle Image Updater (v1.2 / CRD ImageUpdater) : remplace les annotations
+# sur les Applications. Une ref par env, chacune filtrant les tags de SA branche
+# (allowTags) et écrivant le nouveau tag dans le kustomization de SON overlay.
+# updateStrategy "latest" = dernière image buildée parmi les tags autorisés.
+# Le credential GHCR (lecture) vient de la conf registre (values.yaml) ; le write-back
+# git utilise le secret argocd/git-creds.
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: udagram
+  namespace: argocd
+spec:
+  applicationRefs:
+    # --- DEV : tags dev-* ---
+    - namePattern: udagram-dev
+      commonUpdateSettings:
+        updateStrategy: latest
+        allowTags: "^dev-"
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: main
+          writeBackTarget: "kustomization:overlays/dev"
+      images:
+        - alias: frontend
+          imageName: ghcr.io/mateplo/udagram-frontend
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-frontend } }
+        - alias: user
+          imageName: ghcr.io/mateplo/udagram-restapi-user
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-user } }
+        - alias: feed
+          imageName: ghcr.io/mateplo/udagram-restapi-feed
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-feed } }
+        - alias: filter
+          imageName: ghcr.io/mateplo/udagram-restapi-image-filter
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-image-filter } }
+    # --- STAGING : tags staging-* ---
+    - namePattern: udagram-staging
+      commonUpdateSettings:
+        updateStrategy: latest
+        allowTags: "^staging-"
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: main
+          writeBackTarget: "kustomization:overlays/staging"
+      images:
+        - alias: frontend
+          imageName: ghcr.io/mateplo/udagram-frontend
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-frontend } }
+        - alias: user
+          imageName: ghcr.io/mateplo/udagram-restapi-user
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-user } }
+        - alias: feed
+          imageName: ghcr.io/mateplo/udagram-restapi-feed
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-feed } }
+        - alias: filter
+          imageName: ghcr.io/mateplo/udagram-restapi-image-filter
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-image-filter } }
+    # --- PROD : tags master-* / main-* ---
+    - namePattern: udagram-prod
+      commonUpdateSettings:
+        updateStrategy: latest
+        allowTags: "^(master|main)-"
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: main
+          writeBackTarget: "kustomization:overlays/prod"
+      images:
+        - alias: frontend
+          imageName: ghcr.io/mateplo/udagram-frontend
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-frontend } }
+        - alias: user
+          imageName: ghcr.io/mateplo/udagram-restapi-user
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-user } }
+        - alias: feed
+          imageName: ghcr.io/mateplo/udagram-restapi-feed
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-feed } }
+        - alias: filter
+          imageName: ghcr.io/mateplo/udagram-restapi-image-filter
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/udagram-restapi-image-filter } }

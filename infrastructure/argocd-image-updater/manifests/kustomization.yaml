@@ -1,0 +1,5 @@
+# Manifeste ImageUpdater (nouveau modèle CRD) déployé en 3e source du composant helm.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - imageupdater.yaml
