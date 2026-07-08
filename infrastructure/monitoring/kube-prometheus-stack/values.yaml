@@ -124,11 +124,19 @@ grafana:
       memory: 128Mi
     limits:
       memory: 256Mi
+  # Grafana ne réécrit JAMAIS l'uid d'un datasource déjà présent en base (persistée sur le
+  # PVC) : le tout premier provisioning avait créé Loki avec un uid auto-généré, et ajouter
+  # `uid: loki` ensuite restait sans effet. `deleteDatasources` force Grafana à supprimer puis
+  # recréer le datasource à chaque boot -> il repart à neuf et honore enfin `uid: loki`.
+  # Opération idempotente et sans perte (un datasource n'est qu'un pointeur vers Loki).
+  deleteDatasources:
+    - name: Loki
+      orgId: 1
   # Datasource Loki ajoutée automatiquement (Prometheus l'est déjà par le chart).
   additionalDataSources:
     - name: Loki
       type: loki
-      # uid stable (sinon auto-généré et instable) -> référençable en dur dans les dashboards.
+      # uid stable référençable EN DUR dans les dashboards (cf. deleteDatasources ci-dessus).
       uid: loki
       access: proxy
       url: http://loki.monitoring.svc.cluster.local:3100
