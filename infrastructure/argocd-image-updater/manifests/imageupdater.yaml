@@ -14,8 +14,8 @@ spec:
     # --- DEV : tags dev-* ---
     - namePattern: udagram-dev
       commonUpdateSettings:
-        updateStrategy: latest
-        allowTags: "^dev-"
+        updateStrategy: newest-build
+        allowTags: "regexp:^dev-"
       writeBackConfig:
         method: "git:secret:argocd/git-creds"
         gitConfig:
@@ -37,8 +37,8 @@ spec:
     # --- STAGING : tags staging-* ---
     - namePattern: udagram-staging
       commonUpdateSettings:
-        updateStrategy: latest
-        allowTags: "^staging-"
+        updateStrategy: newest-build
+        allowTags: "regexp:^staging-"
       writeBackConfig:
         method: "git:secret:argocd/git-creds"
         gitConfig:
@@ -60,8 +60,8 @@ spec:
     # --- PROD : tags master-* / main-* ---
     - namePattern: udagram-prod
       commonUpdateSettings:
-        updateStrategy: latest
-        allowTags: "^(master|main)-"
+        updateStrategy: newest-build
+        allowTags: "regexp:^(master|main)-"
       writeBackConfig:
         method: "git:secret:argocd/git-creds"
         gitConfig:
