@@ -128,5 +128,7 @@ grafana:
   additionalDataSources:
     - name: Loki
       type: loki
+      # uid stable (sinon auto-généré et instable) -> référençable en dur dans les dashboards.
+      uid: loki
       access: proxy
       url: http://loki.monitoring.svc.cluster.local:3100
