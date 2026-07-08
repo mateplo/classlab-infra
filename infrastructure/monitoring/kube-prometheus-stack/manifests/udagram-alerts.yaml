@@ -1,0 +1,49 @@
+# Règles d'alerte app-spécifiques (en plus des centaines de règles par défaut du chart).
+# Prometheus les découvre partout (ruleSelectorNilUsesHelmValues: false dans values.yaml) ;
+# le label `release` n'est donc pas requis mais gardé par convention.
+# Les alertes firing sont routées par Alertmanager vers Mailpit (cf. values.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: udagram-app-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: udagram.app
+      rules:
+        # Un backend n'a plus aucune réplique disponible (crash, éviction, scale 0…).
+        # S'appuie sur kube-state-metrics -> se déclenche même si la cible de scrape
+        # disparaît (un `up == 0` ne matcherait plus rien si le pod est supprimé).
+        - alert: UdagramBackendDown
+          expr: kube_deployment_status_replicas_available{namespace=~"classlab-code-.*", deployment=~"backend-.*"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backend indisponible : {{ $labels.deployment }} ({{ $labels.namespace }})"
+            description: "Le déploiement {{ $labels.deployment }} de {{ $labels.namespace }} n'a aucune réplique disponible depuis 2 min."
+
+        # Taux de 5xx > 5 % sur 5 min (hors endpoint /metrics).
+        - alert: UdagramHighErrorRate
+          expr: |
+            100 * sum by (namespace, job) (rate(http_request_duration_seconds_count{route!="/metrics", status=~"5.."}[5m]))
+              / clamp_min(sum by (namespace, job) (rate(http_request_duration_seconds_count{route!="/metrics"}[5m])), 0.001) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Taux d'erreur 5xx élevé : {{ $labels.job }} ({{ $labels.namespace }})"
+            description: "{{ $labels.job }} renvoie plus de 5 % de réponses 5xx depuis 5 min."
+
+        # Latence p95 applicative > 1 s sur 5 min (hors /metrics).
+        - alert: UdagramHighLatencyP95
+          expr: |
+            histogram_quantile(0.95, sum by (namespace, job, le) (rate(http_request_duration_seconds_bucket{route!="/metrics"}[5m]))) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Latence p95 élevée : {{ $labels.job }} ({{ $labels.namespace }})"
+            description: "La latence p95 de {{ $labels.job }} dépasse 1 s depuis 5 min."

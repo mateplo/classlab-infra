@@ -1,0 +1,4 @@
+name: mailpit
+namespace: monitoring
+syncWave: "2"
+type: kustomize

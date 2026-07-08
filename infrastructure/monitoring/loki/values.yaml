@@ -59,10 +59,14 @@ minio:
   enabled: false
 
 # --- Monitoring ---
-# ServiceMonitor Loki (auto-scrape) + dashboards Grafana livrés en ConfigMap
-# (ramassés par le sidecar Grafana grâce à searchNamespace=ALL).
+# ServiceMonitor Loki (auto-scrape des métriques loki_* par Prometheus) : conservé.
+# Dashboards : DÉSACTIVÉS. Le chart livre les dashboards loki-mixin conçus pour un Loki
+# DISTRIBUÉ (jobs séparés loki-read/loki-write/ingester/...). Ici Loki tourne en
+# single-binary (un seul job `<ns>/loki`), donc ces dashboards restent vides par
+# conception. L'accès aux logs se fait via le dashboard « Udagram » (panneau Loki) et
+# via Grafana Explore. On évite ainsi des dashboards trompeurs et non pertinents.
 monitoring:
   serviceMonitor:
     enabled: true
   dashboards:
-    enabled: true
+    enabled: false

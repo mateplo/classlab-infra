@@ -72,6 +72,34 @@ prometheus:
 
 # --- Alertmanager ---
 alertmanager:
+  # Routage + notifications. Fournir `config` REMPLACE la config par défaut du chart :
+  # on réinclut donc la route Watchdog -> null. Toutes les autres alertes firing (les
+  # nôtres + celles par défaut du chart) partent en email vers Mailpit, la fausse boîte
+  # in-cluster (cf. infrastructure/monitoring/mailpit) -> consultables sur mailpit.classlab.lan.
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['namespace', 'alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: mailpit
+      routes:
+        # Watchdog = heartbeat toujours firing (prouve que la chaîne d'alerte vit) -> ignoré.
+        - receiver: 'null'
+          matchers:
+            - alertname = "Watchdog"
+    receivers:
+      - name: 'null'
+      - name: mailpit
+        email_configs:
+          # Mailpit accepte tout sans auth ni TLS -> from/to arbitraires, require_tls false.
+          - to: alerts@classlab.lan
+            from: alertmanager@classlab.lan
+            smarthost: mailpit.monitoring.svc.cluster.local:1025
+            require_tls: false
+            send_resolved: true
   alertmanagerSpec:
     resources:
       requests:

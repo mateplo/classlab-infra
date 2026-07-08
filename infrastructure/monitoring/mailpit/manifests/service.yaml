@@ -1,0 +1,18 @@
+# Expose SMTP (ciblé par Alertmanager en interne) et HTTP (UI, exposée via HTTPRoute).
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: mailpit
+spec:
+  selector:
+    app.kubernetes.io/name: mailpit
+  ports:
+    - name: smtp
+      port: 1025
+      targetPort: smtp
+    - name: http
+      port: 8025
+      targetPort: http

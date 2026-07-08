@@ -1,0 +1,8 @@
+# Mailpit : fausse boîte mail in-cluster (serveur SMTP + UI web) servant de cible aux
+# notifications Alertmanager. Aucune persistance : l'inbox est éphémère (démo/lab).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+  - httproute.yaml
