@@ -7,3 +7,4 @@ resources:
   - prometheus.yaml
   - alertmanager.yaml
   - grafana-admin-sealedsecret.yaml
+  - udagram-dashboard.yaml
