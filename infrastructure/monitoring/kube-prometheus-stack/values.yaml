@@ -105,13 +105,15 @@ grafana:
   sidecar:
     dashboards:
       searchNamespace: ALL
-    # Les sidecars (dashboards + datasources) sont sinon non bornés -> plafond bas.
+    # Les sidecars (dashboards + datasources) sont sinon non bornés. Le sidecar dashboards
+    # scanne les ConfigMaps de TOUS les namespaces (searchNamespace: ALL) -> 96Mi OOMait,
+    # on remonte à 192Mi.
     resources:
       requests:
         cpu: 10m
-        memory: 32Mi
+        memory: 48Mi
       limits:
-        memory: 96Mi
+        memory: 192Mi
   persistence:
     enabled: true
     storageClassName: local-path
