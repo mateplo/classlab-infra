@@ -146,12 +146,17 @@ grafana:
     enabled: true
     storageClassName: local-path
     size: 5Gi
+  # Grafana récent embarque une unified storage (apiserver interne dashboard.grafana.app +
+  # index bleve) bien plus lourde : le conteneur sature 256Mi (~250Mi observés) -> GC en
+  # boucle, /api/health timeout, readiness/liveness KO. On double la mémoire. CPU request
+  # relevée aussi : il tire ~400m alors que 50m étaient réservés -> déprioritisé sous
+  # contention du nœud (pas de limite CPU pour éviter le throttling).
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
+      cpu: 200m
       memory: 256Mi
+    limits:
+      memory: 512Mi
   # Grafana ne réécrit JAMAIS l'uid d'un datasource déjà présent en base (persistée sur le
   # PVC) : le tout premier provisioning avait créé Loki avec un uid auto-généré, et ajouter
   # `uid: loki` ensuite restait sans effet. `deleteDatasources` force Grafana à supprimer puis
