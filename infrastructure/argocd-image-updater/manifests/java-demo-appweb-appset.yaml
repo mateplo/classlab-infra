@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: java-demo-appweb
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+
+  # Un environnement = un élément, pointant vers son overlay kustomize (dual-repo).
+  # La logique d'update d'image (par branche) est portée par le manifeste ImageUpdater
+  # (CRD) du même dossier — l'appset ne fait que créer les 2 Applications (dev/prod).
+  generators:
+    - list:
+        elements:
+          - env: dev
+          - env: prod
+
+  template:
+    metadata:
+      name: "java-demo-appweb-{{ .env }}"
+      namespace: argocd
+      labels:
+        app.kubernetes.io/managed-by: applicationset
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/mateplo/java-demo-appweb-k8s.git
+        targetRevision: main
+        path: "overlays/{{ .env }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "java-demo-appweb-{{ .env }}"
+      # L'HPA (prod) pilote spec.replicas des Deployments -> ArgoCD doit l'ignorer,
+      # sinon selfHeal le ramène à la valeur du manifeste et se bat avec l'autoscaler.
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 15s
+            factor: 2
+            maxDuration: 5m

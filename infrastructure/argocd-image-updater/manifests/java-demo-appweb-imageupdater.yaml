@@ -1,0 +1,42 @@
+# Nouveau modèle Image Updater (v1.2 / CRD ImageUpdater) : remplace les annotations
+# sur les Applications. Une ref par env, chacune filtrant les tags de SA branche
+# (allowTags) et écrivant le nouveau tag dans le kustomization de SON overlay.
+# updateStrategy "latest" = dernière image buildée parmi les tags autorisés.
+# Le credential GHCR (lecture) vient de la conf registre (values.yaml) ; le write-back
+# git utilise le secret argocd/git-creds.
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: java-demo-appweb
+  namespace: argocd
+spec:
+  applicationRefs:
+    # --- PROD : tags master-* / main-* ---
+    - namePattern: java-demo-appweb-prod
+      commonUpdateSettings:
+        updateStrategy: newest-build
+        allowTags: "regexp:^(master|main)-"
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: main
+          writeBackTarget: "kustomization"
+      images:
+        - alias: java-demo-appweb
+          imageName: ghcr.io/mateplo/java-demo-appweb
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/java-demo-appweb } }
+
+    # --- DEV : tags dev-* ---
+    - namePattern: java-demo-appweb-dev
+      commonUpdateSettings:
+        updateStrategy: newest-build
+        allowTags: "regexp:^dev-"
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: main
+          writeBackTarget: "kustomization"
+      images:
+        - alias: java-demo-appweb
+          imageName: ghcr.io/mateplo/java-demo-appweb
+          manifestTargets: { kustomize: { name: ghcr.io/mateplo/java-demo-appweb } }
