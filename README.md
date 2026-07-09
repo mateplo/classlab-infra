@@ -50,6 +50,9 @@ transitoirement en échec (ex. un `ClusterIssuer` appliqué avant l'installation
 
 Prérequis : `kubectl` pointant sur le cluster, accès réseau à github.com.
 
+Le script `./bootstrap.sh` enchaîne les étapes ci-dessous (install → attente des CRD → seed
+des Applications) de façon idempotente. Ou manuellement :
+
 ```bash
 # 1. Installer ArgoCD (base kustomize upstream pinnée)
 #    --server-side est REQUIS : la CRD ApplicationSet dépasse la limite d'annotation
