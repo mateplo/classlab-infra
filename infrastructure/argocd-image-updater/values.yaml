@@ -14,6 +14,11 @@
 
 config:
   logLevel: info
+  # Fréquence de scan des registres (défaut binaire 2m). Alimente la clé `interval` de la
+  # ConfigMap argocd-image-updater-config -> env IMAGE_UPDATER_INTERVAL du conteneur.
+  # 1m réduit la latence build->tag écrit dans Git. GHCR a des rate-limits, mais quelques
+  # images -> sans risque.
+  interval: 1m
   # Enregistre GHCR (token anonyme insuffisant : credentials requis même en public).
   registries:
     - name: GitHub Container Registry

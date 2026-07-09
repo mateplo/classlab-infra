@@ -21,6 +21,18 @@ patches:
       data:
         server.insecure: "true"
 
+  # Fréquence de réconciliation Git. Défaut = 180s -> jusqu'à 3 min de latence entre un
+  # push et la détection par ArgoCD (pas de webhook possible : ArgoCD est en .lan, GitHub
+  # public ne peut pas l'atteindre). On descend à 60s : compromis latence / charge
+  # repo-server + rate-limit Git. Ne pas descendre trop bas avec plusieurs apps.
+  - patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cm
+      data:
+        timeout.reconciliation: 60s
+
   # Limites mémoire sur les composants ArgoCD (l'install upstream n'en pose aucune).
   # Objectif lab : conso plafonnée et prévisible pour rester compatible d'un downgrade
   # à 4 Go/nœud. Pas de limite CPU (2 cœurs -> éviter le throttling).
