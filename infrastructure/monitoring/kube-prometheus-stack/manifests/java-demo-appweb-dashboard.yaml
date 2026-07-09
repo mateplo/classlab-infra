@@ -1,0 +1,143 @@
+# Dashboard Grafana « Java Demo Appweb — Application » livré en ConfigMap. Le sidecar
+# dashboards de Grafana le ramasse (label grafana_dashboard, searchNamespace: ALL). Une
+# seule copie (ns monitoring) couvre dev + prod via la variable $namespace.
+# Datasources référencés EN DUR par uid stable : "prometheus" et "loki".
+# NB : métriques issues du client Prometheus Java (simpleclient/hotspot) exposées sur
+# /metrics + le compteur applicatif app_http_requests_total. Pas d'histogramme de latence
+# (contrairement à udagram/prom-client) -> pas de panneaux p95/5xx.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: java-demo-appweb-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  java-demo-appweb.json: |
+    {
+      "uid": "java-demo-appweb",
+      "title": "Java Demo Appweb — Application",
+      "tags": ["java-demo-appweb", "app", "jvm"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "namespace", "type": "query", "label": "Environnement",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": "label_values(jvm_memory_bytes_used{job=\"java-demo-appweb\"}, namespace)",
+            "refresh": 2, "includeAll": false, "sort": 1, "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1, "type": "stat", "title": "Pods UP", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0,
+            "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
+          "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(up{namespace=\"$namespace\", job=\"java-demo-appweb\"})" } ]
+        },
+        {
+          "id": 2, "type": "stat", "title": "Requêtes / s", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
+          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(rate(app_http_requests_total{namespace=\"$namespace\"}[5m]))" } ]
+        },
+        {
+          "id": 3, "type": "stat", "title": "Heap utilisé", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 1 } },
+          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(jvm_memory_bytes_used{namespace=\"$namespace\", area=\"heap\"})" } ]
+        },
+        {
+          "id": 4, "type": "stat", "title": "Threads", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(jvm_threads_current{namespace=\"$namespace\"})" } ]
+        },
+        {
+          "id": 5, "type": "timeseries", "title": "Mémoire heap (used / committed / max)", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [
+            { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "used {{pod}}",
+              "expr": "sum by (pod) (jvm_memory_bytes_used{namespace=\"$namespace\", area=\"heap\"})" },
+            { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "committed {{pod}}",
+              "expr": "sum by (pod) (jvm_memory_bytes_committed{namespace=\"$namespace\", area=\"heap\"})" },
+            { "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "max {{pod}}",
+              "expr": "sum by (pod) (jvm_memory_bytes_max{namespace=\"$namespace\", area=\"heap\"})" }
+          ]
+        },
+        {
+          "id": 6, "type": "timeseries", "title": "Mémoire non-heap (used)", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
+            "expr": "sum by (pod) (jvm_memory_bytes_used{namespace=\"$namespace\", area=\"nonheap\"})" } ]
+        },
+        {
+          "id": 7, "type": "timeseries", "title": "GC — temps passé / s par collecteur", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{gc}}",
+            "expr": "sum by (gc) (rate(jvm_gc_collection_seconds_sum{namespace=\"$namespace\"}[5m]))" } ]
+        },
+        {
+          "id": 8, "type": "timeseries", "title": "Requêtes HTTP / s", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
+            "expr": "sum by (pod) (rate(app_http_requests_total{namespace=\"$namespace\"}[5m]))" } ]
+        },
+        {
+          "id": 9, "type": "timeseries", "title": "Mémoire RSS par pod", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
+            "expr": "process_resident_memory_bytes{namespace=\"$namespace\", job=\"java-demo-appweb\"}" } ]
+        },
+        {
+          "id": 10, "type": "timeseries", "title": "CPU par pod", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
+            "expr": "rate(process_cpu_seconds_total{namespace=\"$namespace\", job=\"java-demo-appweb\"}[5m])" } ]
+        },
+        {
+          "id": 11, "type": "timeseries", "title": "Threads (current / daemon)", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 0 } } },
+          "targets": [
+            { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "current {{pod}}",
+              "expr": "sum by (pod) (jvm_threads_current{namespace=\"$namespace\"})" },
+            { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "daemon {{pod}}",
+              "expr": "sum by (pod) (jvm_threads_daemon{namespace=\"$namespace\"})" }
+          ]
+        },
+        {
+          "id": 12, "type": "timeseries", "title": "Classes chargées", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
+            "expr": "sum by (pod) (jvm_classes_currently_loaded{namespace=\"$namespace\"})" } ]
+        },
+        {
+          "id": 13, "type": "logs", "title": "Logs (Loki) — $namespace", "gridPos": { "h": 10, "w": 24, "x": 0, "y": 36 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true },
+          "targets": [ { "refId": "A", "datasource": { "type": "loki", "uid": "loki" },
+            "expr": "{namespace=\"$namespace\"}" } ]
+        }
+      ]
+    }

@@ -9,3 +9,4 @@ resources:
   - grafana-admin-sealedsecret.yaml
   - udagram-dashboard.yaml
   - udagram-alerts.yaml
+  - java-demo-appweb-dashboard.yaml
