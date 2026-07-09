@@ -1,0 +1,52 @@
+# Règles d'alerte de la webapp Java (en plus des règles par défaut du chart). Prometheus
+# les découvre partout (ruleSelectorNilUsesHelmValues: false) ; le label `release` est
+# gardé par convention. Les alertes firing sont routées par Alertmanager vers Mailpit.
+#
+# Métriques dispo : up + jvm_*/process_* (client Prometheus embarqué) + kube-state-metrics.
+# Pas d'histogramme HTTP côté Java -> pas d'alerte latence/5xx (contrairement à udagram).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: java-demo-appweb-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: java-demo-appweb.app
+      rules:
+        # Plus aucune réplique disponible (crash, éviction, scale 0…). Basé sur
+        # kube-state-metrics -> se déclenche même si la cible de scrape a disparu
+        # (un `up == 0` ne matcherait plus rien si le pod est supprimé).
+        - alert: JavaDemoAppDown
+          expr: kube_deployment_status_replicas_available{namespace=~"java-demo-appweb-.*", deployment="java-demo-appweb"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "java-demo-appweb indisponible ({{ $labels.namespace }})"
+            description: "Le déploiement java-demo-appweb de {{ $labels.namespace }} n'a aucune réplique disponible depuis 2 min."
+
+        # Redémarrages répétés = CrashLoopBackOff, typiquement un OOMKill (l'app a déjà
+        # OOM sur une limite mémoire trop basse). Capte le symptôme sans dépendre du
+        # scrape (le pod peut être down au moment où on regarde).
+        - alert: JavaDemoAppRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"java-demo-appweb-.*", container="java-demo-appweb"}[15m]) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "java-demo-appweb redémarre en boucle ({{ $labels.namespace }})"
+            description: "Le conteneur {{ $labels.pod }} a redémarré plus de 2 fois en 15 min (souvent un OOMKill / crashloop)."
+
+        # Heap JVM proche du max -> risque de GC en boucle puis OutOfMemory applicatif.
+        - alert: JavaDemoHighHeapUsage
+          expr: |
+            jvm_memory_bytes_used{namespace=~"java-demo-appweb-.*", area="heap"}
+              / jvm_memory_bytes_max{namespace=~"java-demo-appweb-.*", area="heap"} > 0.9
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Heap JVM élevé : {{ $labels.pod }} ({{ $labels.namespace }})"
+            description: "Le heap de {{ $labels.pod }} dépasse 90 % du max depuis 10 min."

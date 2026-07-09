@@ -10,3 +10,4 @@ resources:
   - udagram-dashboard.yaml
   - udagram-alerts.yaml
   - java-demo-appweb-dashboard.yaml
+  - java-demo-appweb-alerts.yaml
