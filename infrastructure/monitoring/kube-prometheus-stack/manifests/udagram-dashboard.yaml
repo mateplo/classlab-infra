@@ -3,6 +3,12 @@
 # (ns monitoring) couvre les 3 envs via la variable $namespace.
 # Datasources référencés EN DUR par uid stable : "prometheus" (défaut kube-prometheus-stack)
 # et "loki" (uid pinné dans les values Grafana) -> pas de variable datasource fragile.
+#
+# Recentré sur des métriques TOUJOURS peuplées (santé up, runtime Node.js, process, logs).
+# Les backends de démo ne reçoivent aucun trafic hormis le scrape /metrics : les panneaux
+# HTTP ne se remplissent donc que si on génère de la charge (sinon 0). La variable
+# $namespace est scopée sur `job=~"backend-.*"` pour ne lister que les envs Udagram (le nom
+# http_request_duration_seconds_* est partagé par Grafana/Loki/ArgoCD -> sinon pollué).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -25,92 +31,93 @@ data:
           {
             "name": "namespace", "type": "query", "label": "Environnement",
             "datasource": { "type": "prometheus", "uid": "prometheus" },
-            "query": "label_values(http_request_duration_seconds_count, namespace)",
+            "query": "label_values(up{job=~\"backend-.*\"}, namespace)",
             "refresh": 2, "includeAll": false, "sort": 1, "current": {}
           }
         ]
       },
       "panels": [
         {
-          "id": 1, "type": "stat", "title": "Requêtes / s", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "id": 1, "type": "stat", "title": "Backends UP", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
-          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-            "expr": "sum(rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m]))" } ]
-        },
-        {
-          "id": 2, "type": "stat", "title": "Taux d'erreur 5xx", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2,
-            "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 } ] } } },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0,
+            "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1 }, { "color": "green", "value": 3 } ] } } },
           "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-            "expr": "100 * sum(rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m])), 0.0001)" } ]
-        },
-        {
-          "id": 3, "type": "stat", "title": "Latence p95", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
-          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-            "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!=\"/metrics\"}[5m])))" } ]
-        },
-        {
-          "id": 4, "type": "stat", "title": "Backends UP", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
-          "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
           "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
             "expr": "sum(up{namespace=\"$namespace\", job=~\"backend-.*\"})" } ]
         },
         {
-          "id": 5, "type": "timeseries", "title": "Requêtes / s par service", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "id": 2, "type": "stat", "title": "Requêtes / s (hors scrape)", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{job}}",
-            "expr": "sum by (job) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m]))" } ]
+          "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
+          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m])) or vector(0)" } ]
         },
         {
-          "id": 6, "type": "timeseries", "title": "Erreurs 5xx / s par service", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "id": 3, "type": "stat", "title": "Mémoire RSS totale", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{job}}",
-            "expr": "sum by (job) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\", status=~\"5..\"}[5m]))" } ]
+          "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 1 } },
+          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(process_resident_memory_bytes{namespace=\"$namespace\", job=~\"backend-.*\"})" } ]
         },
         {
-          "id": 7, "type": "timeseries", "title": "Latence (p50 / p95 / p99)", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "id": 4, "type": "stat", "title": "Event-loop lag p99 (max)", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 0 } } },
+          "fieldConfig": { "defaults": { "unit": "s", "decimals": 3,
+            "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.1 }, { "color": "red", "value": 0.25 } ] } } },
+          "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "max(nodejs_eventloop_lag_p99_seconds{namespace=\"$namespace\"})" } ]
+        },
+        {
+          "id": 5, "type": "timeseries", "title": "Node.js — heap (used / total) par pod", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
           "targets": [
-            { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "p50",
-              "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!=\"/metrics\"}[5m])))" },
-            { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "p95",
-              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!=\"/metrics\"}[5m])))" },
-            { "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "p99",
-              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!=\"/metrics\"}[5m])))" }
+            { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "used {{pod}}",
+              "expr": "nodejs_heap_size_used_bytes{namespace=\"$namespace\", job=~\"backend-.*\"}" },
+            { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "total {{pod}}",
+              "expr": "nodejs_heap_size_total_bytes{namespace=\"$namespace\", job=~\"backend-.*\"}" }
           ]
         },
         {
-          "id": 8, "type": "timeseries", "title": "Requêtes / s par code HTTP", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "id": 6, "type": "timeseries", "title": "Event-loop lag p99 par service", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 30, "stacking": { "mode": "normal" } } } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{status}}",
-            "expr": "sum by (status) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m]))" } ]
+          "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 0 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{job}}",
+            "expr": "max by (job) (nodejs_eventloop_lag_p99_seconds{namespace=\"$namespace\", job=~\"backend-.*\"})" } ]
         },
         {
-          "id": 9, "type": "timeseries", "title": "Mémoire RSS par pod", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+          "id": 7, "type": "timeseries", "title": "CPU par pod", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
+            "expr": "rate(process_cpu_seconds_total{namespace=\"$namespace\", job=~\"backend-.*\"}[5m])" } ]
+        },
+        {
+          "id": 8, "type": "timeseries", "title": "Mémoire RSS par pod", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
           "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
             "expr": "process_resident_memory_bytes{namespace=\"$namespace\", job=~\"backend-.*\"}" } ]
         },
         {
-          "id": 10, "type": "timeseries", "title": "CPU par pod", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+          "id": 9, "type": "timeseries", "title": "Requêtes / s par service (hors /metrics)", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
-          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{pod}}",
-            "expr": "rate(process_cpu_seconds_total{namespace=\"$namespace\", job=~\"backend-.*\"}[5m])" } ]
+          "description": "Vide tant qu'aucun trafic applicatif n'atteint les backends (le scrape /metrics est exclu).",
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{job}}",
+            "expr": "sum by (job) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m]))" } ]
+        },
+        {
+          "id": 10, "type": "timeseries", "title": "Requêtes / s par code HTTP (hors /metrics)", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Vide tant qu'aucun trafic applicatif n'atteint les backends.",
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 30, "stacking": { "mode": "normal" } } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "legendFormat": "{{status}}",
+            "expr": "sum by (status) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", route!=\"/metrics\"}[5m]))" } ]
         },
         {
           "id": 11, "type": "logs", "title": "Logs (Loki) — $namespace", "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
