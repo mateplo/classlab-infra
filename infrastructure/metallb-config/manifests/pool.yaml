@@ -1,6 +1,11 @@
-# Configuration MetalLB (le déploiement MetalLB lui-même est un prérequis k3s hors-GitOps).
-# Ces CR reprennent EXACTEMENT l'existant (pool-1 / k3s-l2) pour qu'ArgoCD les adopte
-# sans provoquer de churn.
+# Configuration réseau de MetalLB (le contrôleur est installé par le composant
+# `metallb` en wave 0 ; ce pool est appliqué en wave 1, une fois les CRD présentes).
+#
+# ⚠️⚠️ POINT DE RÉGLAGE PAR ENVIRONNEMENT ⚠️⚠️
+# En mode L2, les IP ci-dessous DOIVENT appartenir au même sous-réseau L2 que les
+# nœuds (MetalLB y répond aux ARP). Sur un autre réseau, ADAPTE la plage puis push :
+# les services LoadBalancer restent injoignables sinon.
+#   ex. nœuds en 10.0.0.0/24  →  10.0.0.240-10.0.0.250
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -11,7 +16,7 @@ spec:
   autoAssign: true
   avoidBuggyIPs: false
   addresses:
-    - 192.168.56.240-192.168.56.250
+    - 192.168.56.240-192.168.56.250   # ← À ADAPTER au sous-réseau de tes nœuds
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement

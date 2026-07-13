@@ -11,8 +11,12 @@ sont synchronisés via un **ApplicationSet**.
 ## Cluster cible
 
 - k3s v1.32, 2 nœuds, réseau privé `192.168.56.0/24`
-- **Traefik** (ingress + Gateway API), **MetalLB** (pool `192.168.56.240-250`, L2) : prérequis déjà déployés
+- **Traefik** (ingress + Gateway API) : prérequis k3s. **MetalLB** (contrôleur + pool L2) : géré en GitOps (composants `metallb` puis `metallb-config`)
 - StorageClass unique `local-path` (node-local)
+
+> ⚠️ **k3s doit démarrer avec `--disable=servicelb`** (le load-balancer intégré entre
+> en conflit avec MetalLB). La plage du pool L2 (`metallb-config`) doit correspondre au
+> sous-réseau des nœuds — voir `infrastructure/metallb-config/manifests/pool.yaml`.
 
 ## Arborescence
 
@@ -35,8 +39,9 @@ infrastructure/
 |------|-----------|------|------|
 | 0 | `sealed-secrets` | helm | Secrets chiffrés dans Git (en attendant Vault) |
 | 0 | `cert-manager` | helm | Gestion des certificats |
+| 0 | `metallb` | helm | Contrôleur MetalLB (chart officiel) — installe CRDs + speaker + webhook |
 | 1 | `cert-manager-issuers` | kustomize | Chaîne CA interne self-signed (`ClusterIssuer internal-ca`) |
-| 1 | `metallb-config` | kustomize | Pool d'IP + L2Advertisement (adoption de l'existant) |
+| 1 | `metallb-config` | kustomize | Pool d'IP + L2Advertisement (**plage à adapter au réseau des nœuds**) |
 | 1 | `traefik-gateway` | kustomize | Active le provider Gateway API de Traefik + GatewayClass + Gateway partagé (TLS interne) |
 | 1 | `cnpg` | helm | Opérateur CloudNativePG |
 | 2 | `kube-prometheus-stack` | helm | Prometheus + Alertmanager + Grafana |

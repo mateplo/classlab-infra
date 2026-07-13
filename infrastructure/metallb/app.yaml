@@ -1,0 +1,7 @@
+name: metallb
+namespace: metallb-system
+syncWave: "0"
+type: helm
+repoURL: https://metallb.github.io/metallb
+chart: metallb
+targetRevision: 0.14.8

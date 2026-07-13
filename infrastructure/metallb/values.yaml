@@ -1,0 +1,12 @@
+# Valeurs du chart MetalLB.
+#
+# Les défauts conviennent à un cluster L2 : contrôleur + speaker + CRDs + webhook.
+# Le mode L2 ne nécessite aucune config ici — c'est le pool qui porte la conf réseau
+# (IPAddressPool + L2Advertisement), géré à part par le composant `metallb-config`
+# (wave 1), qui s'applique donc APRÈS l'installation du contrôleur (wave 0).
+#
+# ⚠️ Prérequis côté k3s : désactiver le load-balancer intégré (servicelb/Klipper)
+#    sinon il entre en conflit avec MetalLB — voir k3s-ansible (`--disable=servicelb`).
+#
+# Voir toutes les valeurs disponibles :
+#   helm show values metallb/metallb --version 0.14.8
